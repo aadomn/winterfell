@@ -22,8 +22,8 @@
 //! **PROTOTYPE/DESIGN PHASE** - Not ready for production use.
 //!
 //! A comprehensive technical feasibility study has been completed. See:
-//! - Technical Report: `/AGGREGATE_THRESHOLD_TECHNICAL_REPORT.md`
-//! - Module README: `./README.md`
+//! - Technical Report: `AGGREGATE_THRESHOLD_TECHNICAL_REPORT.md` (in repository root)
+//! - Module README: `README.md` (in this directory)
 //!
 //! ### Key Findings
 //! - ✅ Mathematically feasible and cryptographically sound
@@ -121,7 +121,7 @@ pub use signature::{MultiGroupPublicKey, PublicKeyGroup};
 // Note: This module is currently a design/prototype.
 // Full implementation requires:
 // 1. Complete AIR constraint system (air.rs)
-// 2. Execution trace generation (prover.rs)  
+// 2. Execution trace generation (prover.rs)
 // 3. Example runner integration
 // 4. Comprehensive test suite
 // 5. Security audit
@@ -130,22 +130,20 @@ pub use signature::{MultiGroupPublicKey, PublicKeyGroup};
 mod tests {
     use super::*;
     use crate::lamport::signature::PrivateKey;
-    
+
     #[test]
     fn test_public_key_group_creation() {
         // Generate some test keys
-        let keys: Vec<_> = (0..7)
-            .map(|i| PrivateKey::from_seed([i as u8; 32]).pub_key())
-            .collect();
-        
+        let keys: Vec<_> = (0..7).map(|i| PrivateKey::from_seed([i as u8; 32]).pub_key()).collect();
+
         // Create a group with 5-of-7 threshold
         let group = PublicKeyGroup::new(keys.clone(), 5);
-        
+
         assert_eq!(group.num_keys(), 7);
         assert_eq!(group.threshold(), 5);
         assert!(group.num_leaves().is_power_of_two());
         assert!(group.num_leaves() > group.num_keys());
-        
+
         // Note: Keys are sorted in the group, so we verify count and access
         // but don't check exact order match with input
         for i in 0..7 {
@@ -153,44 +151,39 @@ mod tests {
         }
         assert_eq!(group.get_key(7), None);
     }
-    
+
     #[test]
     fn test_multi_group_creation() {
         // Create multiple groups
-        let keys1: Vec<_> = (0..7)
-            .map(|i| PrivateKey::from_seed([i as u8; 32]).pub_key())
-            .collect();
-        let keys2: Vec<_> = (10..15)
-            .map(|i| PrivateKey::from_seed([i as u8; 32]).pub_key())
-            .collect();
-        let keys3: Vec<_> = (20..29)
-            .map(|i| PrivateKey::from_seed([i as u8; 32]).pub_key())
-            .collect();
-        
+        let keys1: Vec<_> =
+            (0..7).map(|i| PrivateKey::from_seed([i as u8; 32]).pub_key()).collect();
+        let keys2: Vec<_> =
+            (10..15).map(|i| PrivateKey::from_seed([i as u8; 32]).pub_key()).collect();
+        let keys3: Vec<_> =
+            (20..29).map(|i| PrivateKey::from_seed([i as u8; 32]).pub_key()).collect();
+
         let group1 = PublicKeyGroup::new(keys1, 5); // 5-of-7
         let group2 = PublicKeyGroup::new(keys2, 3); // 3-of-5
         let group3 = PublicKeyGroup::new(keys3, 6); // 6-of-9
-        
+
         // Create multi-group key
         let multi_key = MultiGroupPublicKey::new(vec![group1, group2, group3]);
-        
+
         assert_eq!(multi_key.num_groups(), 3);
         assert!(multi_key.num_group_leaves().is_power_of_two());
-        
+
         // Verify we can access groups
         assert!(multi_key.get_group(0).is_some());
         assert!(multi_key.get_group(1).is_some());
         assert!(multi_key.get_group(2).is_some());
         assert!(multi_key.get_group(3).is_none());
     }
-    
+
     #[test]
     fn test_group_merkle_paths() {
-        let keys: Vec<_> = (0..7)
-            .map(|i| PrivateKey::from_seed([i as u8; 32]).pub_key())
-            .collect();
+        let keys: Vec<_> = (0..7).map(|i| PrivateKey::from_seed([i as u8; 32]).pub_key()).collect();
         let group = PublicKeyGroup::new(keys, 5);
-        
+
         // Get Merkle path for each key
         for i in 0..group.num_leaves() {
             let path = group.get_leaf_path(i);
@@ -200,23 +193,19 @@ mod tests {
             assert!(path.len() > 0);
         }
     }
-    
+
     #[test]
     #[should_panic(expected = "Threshold cannot exceed number of keys")]
     fn test_invalid_threshold() {
-        let keys: Vec<_> = (0..5)
-            .map(|i| PrivateKey::from_seed([i as u8; 32]).pub_key())
-            .collect();
+        let keys: Vec<_> = (0..5).map(|i| PrivateKey::from_seed([i as u8; 32]).pub_key()).collect();
         // This should panic - threshold > num keys
         let _group = PublicKeyGroup::new(keys, 6);
     }
-    
+
     #[test]
     #[should_panic(expected = "Threshold must be at least 1")]
     fn test_zero_threshold() {
-        let keys: Vec<_> = (0..5)
-            .map(|i| PrivateKey::from_seed([i as u8; 32]).pub_key())
-            .collect();
+        let keys: Vec<_> = (0..5).map(|i| PrivateKey::from_seed([i as u8; 32]).pub_key()).collect();
         // This should panic - threshold = 0
         let _group = PublicKeyGroup::new(keys, 0);
     }

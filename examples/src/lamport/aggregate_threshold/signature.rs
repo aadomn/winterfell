@@ -13,6 +13,20 @@ use crate::{
     utils::rescue::{Hash, Rescue128},
 };
 
+// HELPER FUNCTIONS
+// ================================================================================================
+
+/// Pads a size to the next power of two, ensuring it's strictly greater than the input.
+/// If the input is already a power of two, doubles it.
+/// This ensures Merkle trees have more leaves than actual data items.
+fn pad_to_power_of_two(size: usize) -> usize {
+    if size.is_power_of_two() {
+        (size + 1).next_power_of_two()
+    } else {
+        size.next_power_of_two()
+    }
+}
+
 // AGGREGATED PUBLIC KEY GROUP
 // ================================================================================================
 
@@ -26,14 +40,14 @@ pub struct PublicKeyGroup {
 
 impl PublicKeyGroup {
     /// Creates a new public key group with the specified keys and threshold.
-    /// 
+    ///
     /// # Arguments
     /// * `keys` - Vector of public keys to aggregate
     /// * `threshold` - Minimum number of valid signatures required from this group
     pub fn new(mut keys: Vec<PublicKey>, threshold: usize) -> Self {
         assert!(threshold <= keys.len(), "Threshold cannot exceed number of keys");
         assert!(threshold > 0, "Threshold must be at least 1");
-        
+
         // sort keys in ascending order
         keys.sort();
 
@@ -43,13 +57,10 @@ impl PublicKeyGroup {
             leaves.push(Rescue128::digest(&key.to_elements()));
         }
 
-        // pad the list of keys with zero keys to make sure the number of leaves is greater than
-        // the number of keys and is a power of two
-        let num_leaves = if leaves.len().is_power_of_two() {
-            (leaves.len() + 1).next_power_of_two()
-        } else {
-            leaves.len().next_power_of_two()
-        };
+        // Pad the list of keys to ensure the tree has more leaves than keys (required for
+        // Merkle tree construction) and is a power of two. If already power of two, double it.
+        // This matches the pattern used in the threshold signature implementation.
+        let num_leaves = pad_to_power_of_two(leaves.len());
         let zero_hash = Rescue128::digest(&[BaseElement::ZERO, BaseElement::ZERO]);
         for _ in leaves.len()..num_leaves {
             leaves.push(zero_hash);
@@ -91,8 +102,11 @@ impl PublicKeyGroup {
     }
 
     /// Returns a Merkle path to the specified leaf.
+    ///
+    /// # Panics
+    /// Panics if index is out of bounds (>= num_leaves()).
     pub fn get_leaf_path(&self, index: usize) -> Vec<Hash> {
-        let (leaf, path) = self.tree.prove(index).unwrap();
+        let (leaf, path) = self.tree.prove(index).expect("index out of bounds");
         let mut result = vec![leaf];
         result.extend_from_slice(&path);
         result
@@ -117,12 +131,8 @@ impl MultiGroupPublicKey {
         // build leaves from group roots
         let mut leaves: Vec<Hash> = groups.iter().map(|g| g.root()).collect();
 
-        // pad to power of two
-        let num_leaves = if leaves.len().is_power_of_two() {
-            (leaves.len() + 1).next_power_of_two()
-        } else {
-            leaves.len().next_power_of_two()
-        };
+        // Pad to power of two using same logic as individual groups
+        let num_leaves = pad_to_power_of_two(leaves.len());
         let zero_hash = Rescue128::digest(&[BaseElement::ZERO, BaseElement::ZERO]);
         for _ in leaves.len()..num_leaves {
             leaves.push(zero_hash);
@@ -150,8 +160,11 @@ impl MultiGroupPublicKey {
     }
 
     /// Returns the Merkle path for a group.
+    ///
+    /// # Panics
+    /// Panics if index is out of bounds (>= num_group_leaves()).
     pub fn get_group_path(&self, index: usize) -> Vec<Hash> {
-        let (leaf, path) = self.group_tree.prove(index).unwrap();
+        let (leaf, path) = self.group_tree.prove(index).expect("index out of bounds");
         let mut result = vec![leaf];
         result.extend_from_slice(&path);
         result

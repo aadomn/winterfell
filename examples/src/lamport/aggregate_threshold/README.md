@@ -13,8 +13,8 @@ The combined feature enables verification of multiple threshold signature groups
 
 **Current Status:** Design and Feasibility Study Complete
 
-A comprehensive technical report is available at:
-`/home/runner/work/winterfell/winterfell/AGGREGATE_THRESHOLD_TECHNICAL_REPORT.md`
+A comprehensive technical report is available in the repository root:
+`../../AGGREGATE_THRESHOLD_TECHNICAL_REPORT.md`
 
 ### Key Findings from Feasibility Study
 
