@@ -6,6 +6,7 @@
 use super::Example;
 
 pub mod aggregate;
+pub mod aggregate_threshold;
 pub mod threshold;
 
 mod signature;
